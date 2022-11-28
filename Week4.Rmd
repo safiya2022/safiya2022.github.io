@@ -1,0 +1,97 @@
+---
+title: "week4"
+output: html_document
+date: "2022-11-28"
+---
+
+## Project target
+
+In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways.
+
+The training data for this project are available here:
+
+<https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv>
+
+The test data are available here:
+
+<https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv>
+
+The goal of the project is to predict the manner in which they did the exercise and the variable name is "classe".
+
+You should create a report describing how you built your model, how you used cross validation, what you think the expected out of sample error is, and why you made the choices you did. You will also use your prediction model to predict 20 different test cases.
+
+## Load and process data
+
+```{r setup and data processing}
+setwd("C:/Users/09833/Documents/R_training/PraticalMachineLearning")
+training      <- read.csv("~/R_training/PraticalMachineLearning/pml-training.csv",
+                          na.strings=c("NA","","#DIV/0!"))
+training      <- training [,colSums(is.na(training )) == 0]
+
+training      <- training[,-c(1:7)]
+ 
+testdata      <- read.csv("~/R_training/PraticalMachineLearning/pml-testing.csv", 
+                         na.strings=c("NA", "", "#DIV/0!"))
+testdata      <- testdata[,colSums(is.na(testdata)) == 0]
+
+testdata      <- testdata[,-c(1:7)]
+library(caret)
+
+inTrain     <- createDataPartition(training$classe, p = 0.7, list = FALSE)
+inTraining  <- training[inTrain,]
+inTest      <- training[-inTrain,]
+
+```
+
+## Cross validation analysis
+
+Apply the random forest algorithm
+
+```{r crossvalidation}
+model <- train(classe ~ .
+                , data = inTraining
+                , method = "rf"
+                , metric = "Accuracy"  # for categorical outcome variable  
+                , preProcess=c("center", "scale") # normalize data to improve accuracy
+                , trControl=trainControl(method = "cv"
+                                        , number = 4 # folds of the training data
+                                        , p= 0.70
+                                        )
+                )
+```
+
+Check the model accuracy result:
+
+```{r check accuracy}
+print(model, digits=4)
+```
+
+## Prediction and assesment
+
+```{r prediction and assesment}
+pred  <- predict(model, newdata=inTest)
+inTest$classe = as.factor(inTest$classe)
+confusionMatrix(pred, inTest$classe)
+
+```
+
+The Accuracy is 0.9939 and within the 95% CI : (0.9915, 0.9957).
+
+```{r model and predictors}
+model$finalModel
+varImp(model)
+
+```
+
+The OOB estimate of error rate is very low at 0.74%, so our model fit is reasonable.
+
+Using testdata to apply the model and make prediction
+
+```{r use model to predict testdata}
+testpredict <- predict(model, newdata=testdata)
+ 
+print(testpredict)
+
+```
+
+The testpredict above list the preditions for the 20 test cases in the test data.
